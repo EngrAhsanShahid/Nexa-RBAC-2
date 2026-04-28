@@ -1,7 +1,24 @@
+from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel
 
+
+# ── Media (clips / images stored in MinIO) ──────────────────────────────────
+
+class MediaRead(BaseModel):
+    object_path:  str               # path inside MinIO bucket
+    media_type:   str               # "clip" or "image"
+    uploaded_by:  Optional[str] = None
+    uploaded_at:  Optional[datetime] = None
+
+
+class MediaUrlResponse(BaseModel):
+    url:        str
+    expires_in: int                 # seconds
+
+
+# ── Cameras ──────────────────────────────────────────────────────────────────
 
 class CameraCreate(BaseModel):
     tenant_id:         str

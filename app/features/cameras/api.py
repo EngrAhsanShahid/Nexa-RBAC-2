@@ -3,9 +3,10 @@ from fastapi import Depends, HTTPException
 from pymongo.database import Database
 
 from app.core.custom_router import ProtectedRouter
+from app.core.minio import generate_presigned_url
 from app.db.session import get_db
 from app.features.auth.models import PermissionEnum
-from app.features.cameras.schemas import CameraCreate, CameraRead
+from app.features.cameras.schemas import CameraCreate, CameraRead, MediaRead, MediaUrlResponse
 
 router = ProtectedRouter()
 
@@ -78,3 +79,42 @@ def delete_camera(
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Camera not found")
     return {"detail": f"Camera {camera_id} deleted by {current_user.get('email')}"}
+
+
+# ──────────────────────────────────────────────
+# Media — retrieve clips / images written by camera AI pipeline
+# ──────────────────────────────────────────────
+
+@router.get(
+    "/{camera_id}/media",
+    response_model=list[MediaRead],
+    dependencies=[ProtectedRouter.requires_permission(PermissionEnum.view_stream)],
+)
+def list_media(camera_id: str, db: Database = Depends(get_db)):
+    """
+    List all images and clips recorded for a camera.
+    Records are written to MongoDB by the camera AI pipeline.
+    Requires view_stream permission.
+    """
+    docs = list(db.camera_media.find({"camera_id": camera_id}, {"_id": 0}))
+    return docs
+
+
+@router.get(
+    "/media/url",
+    response_model=MediaUrlResponse,
+    dependencies=[ProtectedRouter.requires_permission(PermissionEnum.view_stream)],
+)
+def get_media_url(object_path: str):
+    """
+    Generate a temporary presigned download URL for an image or clip stored in MinIO.
+    Pass the object_path returned from list_media.
+    Link expires after MINIO_URL_EXPIRES_SECONDS seconds.
+    Requires view_stream permission.
+    """
+    try:
+        url, expires_in = generate_presigned_url(object_path)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Media file not found in storage")
+
+    return MediaUrlResponse(url=url, expires_in=expires_in)

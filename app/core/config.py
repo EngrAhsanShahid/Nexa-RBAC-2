@@ -15,8 +15,16 @@ class Settings:
 
     # JWT
     SECRET_KEY: str                = os.getenv("SECRET_KEY", "CHANGE_ME_IN_PRODUCTION")
-    ALGORITHM: str                 = "HS256"
+    ALGORITHM: str                 = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+
+    # MinIO
+    MINIO_ENDPOINT: str    = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    MINIO_ACCESS_KEY: str  = os.getenv("MINIO_ACCESS_KEY", "")
+    MINIO_SECRET_KEY: str  = os.getenv("MINIO_SECRET_KEY", "")
+    MINIO_SECURE: bool     = os.getenv("MINIO_SECURE", "false").lower() == "true"
+    MINIO_BUCKET: str      = os.getenv("MINIO_BUCKET", "cameras")
+    MINIO_URL_EXPIRES_SECONDS: int = int(os.getenv("MINIO_URL_EXPIRES_SECONDS", "1800"))
 
 
 @lru_cache
