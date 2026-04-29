@@ -26,6 +26,12 @@ class Settings:
     MINIO_BUCKET: str      = os.getenv("MINIO_BUCKET", "cameras")
     MINIO_URL_EXPIRES_SECONDS: int = int(os.getenv("MINIO_URL_EXPIRES_SECONDS", "1800"))
 
+    # LiveKit
+    LIVEKIT_API_KEY: str    = os.getenv("LIVEKIT_API_KEY", "")
+    LIVEKIT_API_SECRET: str = os.getenv("LIVEKIT_API_SECRET", "")
+    LIVEKIT_URL: str        = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
+    LIVEKIT_TOKEN_TTL: int  = int(os.getenv("LIVEKIT_TOKEN_TTL", "3600"))
+
 
 @lru_cache
 def get_settings() -> Settings:
