@@ -26,7 +26,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router,       prefix="/api/v1/auth",       tags=["auth"])
     app.include_router(management_router, prefix="/api/v1/management", tags=["management"])
     app.include_router(cameras_router,    prefix="/api/v1/cameras",    tags=["cameras"])
-    app.include_router(stream_router,     prefix="/api/v1/livekit",    tags=["livekit"])
+    app.include_router(stream_router,     prefix="/api/v1/stream",     tags=["stream"])
     app.include_router(alerts_router,     prefix="/api/v1/alerts",     tags=["alerts"])
 
     return app

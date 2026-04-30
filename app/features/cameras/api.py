@@ -14,15 +14,11 @@ router = ProtectedRouter()
 
 def _serialize_camera(doc: dict) -> dict:
     return {
-        "id":                str(doc["_id"]),
-        "tenant_id":         doc.get("tenant_id"),
-        "camera_id":         doc.get("camera_id"),
-        "source_path":       doc.get("source_path"),
-        "loop":              doc.get("loop"),
-        "target_fps":        doc.get("target_fps"),
-        "pipelines":         doc.get("pipelines"),
-        "enabled":           doc.get("enabled"),
-        "record_full_video": doc.get("record_full_video"),
+        "id":        str(doc["_id"]),
+        "tenant_id": doc.get("tenant_id"),
+        "camera_id": doc.get("camera_id"),
+        "pipelines": doc.get("pipelines"),
+        "enabled":   doc.get("enabled"),
     }
 
 

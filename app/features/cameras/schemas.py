@@ -44,9 +44,5 @@ class CameraRead(BaseModel):
     id:                str
     tenant_id:         Optional[str] = None
     camera_id:         Optional[str] = None
-    source_path:       Optional[str] = None
-    loop:              Optional[bool] = None
-    target_fps:        Optional[int] = None
     pipelines:         Optional[List[str]] = None
     enabled:           Optional[bool] = None
-    record_full_video: Optional[str] = None
