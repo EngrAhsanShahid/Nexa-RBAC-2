@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.features.auth.models import UserRole, PermissionEnum
 
@@ -32,8 +32,22 @@ class UserRead(BaseModel):
     full_name:   Optional[str] = None
     role:        UserRole
     is_active:   bool
+    tenant_id:   Optional[str] = None
     created_at:  Optional[datetime] = None
     last_active: Optional[datetime] = None
+
+
+class MeResponse(BaseModel):
+    username: str
+    role: str
+    tenant_id: Optional[str] = None
+    allowed_cameras: List[str] = Field(default_factory=list)
+    email: Optional[EmailStr] = None
+    created_at: Optional[datetime] = None
+
+
+class MessageResponse(BaseModel):
+    message: str
 
 
 class UserCreate(BaseModel):
@@ -41,6 +55,7 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = None
     password:  str
     role:      UserRole
+    tenant_id: Optional[str] = None
     overrides: Optional[List[PermissionOverride]] = []
 
 

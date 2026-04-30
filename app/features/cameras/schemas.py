@@ -31,6 +31,15 @@ class CameraCreate(BaseModel):
     record_full_video: str = "false"
 
 
+class CameraUpdate(BaseModel):
+    source_path:       Optional[str] = None
+    loop:              Optional[bool] = None
+    target_fps:        Optional[int] = None
+    pipelines:         Optional[List[str]] = None
+    enabled:           Optional[bool] = None
+    record_full_video: Optional[str] = None
+
+
 class CameraRead(BaseModel):
     id:                str
     tenant_id:         Optional[str] = None

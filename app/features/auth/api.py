@@ -2,7 +2,7 @@ from datetime import timedelta, datetime, timezone
 from typing import Annotated
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pymongo.database import Database
 
@@ -18,7 +18,7 @@ from app.features.auth.security import (
 
 router   = APIRouter()
 settings = get_settings()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
 
 
 # ──────────────────────────────────────────────
@@ -26,16 +26,44 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 # ──────────────────────────────────────────────
 
 def serialize_user(user: dict) -> dict:
-    """Convert a raw MongoDB user document to a safe API-serialisable dict."""
+    """Convert raw user document to frontend-compatible /me payload."""
+    email = user.get("email", "")
+    name = user.get("full_name") or ""
+    tenant_id = user.get("tenant_id") or user.get("tenantId")
+    allowed_cameras = user.get(
+        "allowed_cameras") or user.get("allowedCameras") or []
+    created_at = user.get("created_at")
+
     return {
-        "id":          str(user["_id"]),
-        "email":       user["email"],
-        "full_name":   user.get("full_name"),
-        "role":        user["role"],
-        "is_active":   user.get("is_active", True),
-        "created_at":  user.get("created_at"),
-        "last_active": user.get("last_active"),
+        "username": name,
+        "role": str(user.get("role", "")).lower(),
+        "tenant_id": tenant_id,
+        "allowed_cameras": allowed_cameras,
+        "email": email,
+        "createdAt": created_at,
+        "created_at": created_at,
     }
+
+
+def set_auth_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=settings.COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite=settings.COOKIE_SAMESITE,
+        path=settings.COOKIE_PATH,
+        domain=settings.COOKIE_DOMAIN,
+        max_age=settings.COOKIE_MAX_AGE,
+    )
+
+
+def clear_auth_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=settings.COOKIE_NAME,
+        path=settings.COOKIE_PATH,
+        domain=settings.COOKIE_DOMAIN,
+    )
 
 
 def get_user_by_email(db: Database, email: str):
@@ -54,14 +82,24 @@ def authenticate_user(db: Database, email: str, password: str):
 # ──────────────────────────────────────────────
 
 def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    request: Request,
     db: Database = Depends(get_db),
+    bearer_token: str = Depends(oauth2_scheme),
 ) -> dict:
     """
     Validates the JWT and returns the full user document (dict).
     Also pre-loads role permissions into user["_role_permissions"]
     so RBAC checks don't need an extra DB call.
     """
+    token = request.cookies.get(settings.COOKIE_NAME) or bearer_token
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     token_data = decode_access_token(token)
     if not token_data or not token_data.user_id:
         raise HTTPException(
@@ -110,6 +148,7 @@ def require_role(*roles: UserRole):
 @router.post("/login", response_model=schemas.Token)
 def login(
     body: schemas.LoginRequest,
+    response: Response,
     db: Database = Depends(get_db),
 ):
     user = authenticate_user(db, body.username, body.password)
@@ -128,6 +167,8 @@ def login(
         {"_id": user["_id"]},
         {"$set": {"last_active": datetime.now(timezone.utc)}},
     )
+
+    set_auth_cookie(response, token)
     return schemas.Token(access_token=token)
 
 
@@ -135,6 +176,7 @@ def login(
 @router.post("/token", response_model=schemas.Token, include_in_schema=False)
 def token_form(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    response: Response,
     db: Database = Depends(get_db),
 ):
     user = authenticate_user(db, form_data.username, form_data.password)
@@ -152,9 +194,17 @@ def token_form(
         {"_id": user["_id"]},
         {"$set": {"last_active": datetime.now(timezone.utc)}},
     )
+
+    set_auth_cookie(response, token)
     return schemas.Token(access_token=token)
 
 
-@router.get("/me", response_model=schemas.UserRead)
+@router.get("/me", response_model=schemas.MeResponse)
 def me(current_user: dict = Depends(get_current_user)):
     return serialize_user(current_user)
+
+
+@router.post("/logout", response_model=schemas.MessageResponse)
+def logout(response: Response):
+    clear_auth_cookie(response)
+    return schemas.MessageResponse(message="Logged out successfully")

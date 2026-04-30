@@ -50,6 +50,7 @@ def register_user(user_in: schemas.UserCreate, db: Database = Depends(get_db)):
         "hashed_password":     get_password_hash(user_in.password),
         "role":                user_in.role.value,
         "is_active":           True,
+        "tenant_id":           user_in.tenant_id,
         "permission_overrides": [o.model_dump() for o in (user_in.overrides or [])],
         "created_at":          datetime.now(timezone.utc),
         "last_active":         None,

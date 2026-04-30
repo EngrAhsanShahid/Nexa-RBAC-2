@@ -1,12 +1,13 @@
 from bson import ObjectId
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Query
+from typing import Optional
 from pymongo.database import Database
 
 from app.core.custom_router import ProtectedRouter
 from app.core.minio import generate_presigned_url
 from app.db.session import get_db
 from app.features.auth.models import PermissionEnum
-from app.features.cameras.schemas import CameraCreate, CameraRead, MediaRead, MediaUrlResponse
+from app.features.cameras.schemas import CameraCreate, CameraRead, CameraUpdate, MediaRead, MediaUrlResponse
 
 router = ProtectedRouter()
 
@@ -30,9 +31,12 @@ def _serialize_camera(doc: dict) -> dict:
     response_model=list[CameraRead],
     dependencies=[ProtectedRouter.requires_permission(PermissionEnum.view_stream)],
 )
-def list_cameras(db: Database = Depends(get_db)):
-    """List all cameras. Requires view_stream permission."""
-    cameras = list(db.cameras.find())
+def list_cameras(
+    tenant_id: str = Query(..., description="Filter cameras by tenant_id"),
+    db: Database = Depends(get_db),
+):
+    """List cameras by tenant_id. Requires view_stream permission."""
+    cameras = list(db.cameras.find({"tenant_id": tenant_id}))
     return [_serialize_camera(c) for c in cameras]
 
 
@@ -66,6 +70,30 @@ def add_camera(
     result = db.cameras.insert_one(doc)
     doc["_id"] = result.inserted_id
     return _serialize_camera(doc)
+
+
+@router.patch(
+    "/{camera_id}",
+    response_model=CameraRead,
+)
+def update_camera(
+    camera_id: str,
+    updates: CameraUpdate,
+    db: Database = Depends(get_db),
+    current_user: dict = ProtectedRouter.requires_permission(PermissionEnum.add_camera),
+):
+    """Partially update a camera by camera_id. Requires add_camera permission."""
+    fields = {k: v for k, v in updates.model_dump().items() if v is not None}
+    if not fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    result = db.cameras.find_one_and_update(
+        {"camera_id": camera_id},
+        {"$set": fields},
+        return_document=True,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    return _serialize_camera(result)
 
 
 @router.delete("/{camera_id}")

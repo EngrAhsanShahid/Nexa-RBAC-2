@@ -18,6 +18,19 @@ class Settings:
     ALGORITHM: str                 = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
+    # Frontend / CORS
+    FRONTEND_ORIGINS: str = os.getenv("FRONTEND_ORIGINS", "http://localhost:3000")
+
+    # Auth cookie
+    COOKIE_NAME: str = os.getenv("COOKIE_NAME", "access_token")
+    COOKIE_DOMAIN: str = os.getenv("COOKIE_DOMAIN", "localhost")
+    COOKIE_PATH: str = os.getenv("COOKIE_PATH", "/api/v1")
+    COOKIE_SAMESITE: str = os.getenv("COOKIE_SAMESITE", "strict").lower()
+    COOKIE_SECURE: bool = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+    COOKIE_MAX_AGE: int = int(
+        os.getenv("COOKIE_MAX_AGE", str(int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")) * 60))
+    )
+
     # MinIO
     MINIO_ENDPOINT: str    = os.getenv("MINIO_ENDPOINT", "localhost:9000")
     MINIO_ACCESS_KEY: str  = os.getenv("MINIO_ACCESS_KEY", "")
@@ -32,7 +45,9 @@ class Settings:
     LIVEKIT_URL: str        = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
     LIVEKIT_TOKEN_TTL: int  = int(os.getenv("LIVEKIT_TOKEN_TTL", "3600"))
 
-
+    @property
+    def frontend_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.FRONTEND_ORIGINS.split(",") if origin.strip()]
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
