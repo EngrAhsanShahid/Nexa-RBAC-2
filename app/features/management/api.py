@@ -29,6 +29,7 @@ def list_users(db: Database = Depends(get_db)):
         role_doc = db.roles.find_one({"name": u["role"]}) or {}
         u["_role_permissions"] = role_doc
         result.append({
+            "id": str(u["_id"]),
             **serialize_user(u),
             "permissions": get_effective_permissions(u),
         })
