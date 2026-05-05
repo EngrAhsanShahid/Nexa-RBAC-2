@@ -1,14 +1,12 @@
 from typing import Optional, List
-from datetime import datetime
-
-from bson import ObjectId
-from fastapi import Depends, HTTPException, Query
+from fastapi import Query, Depends
 from pymongo.database import Database
 from pydantic import BaseModel
 
 from app.core.custom_router import ProtectedRouter
 from app.db.session import get_db
 from app.features.auth.models import PermissionEnum
+
 
 router = ProtectedRouter()
 

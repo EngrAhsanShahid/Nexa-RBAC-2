@@ -81,6 +81,43 @@ def authenticate_user(db: Database, email: str, password: str):
 # Core auth dependencies
 # ──────────────────────────────────────────────
 
+async def get_current_user_ws(
+    token: str,
+) -> dict:
+    """
+    Validates the JWT and returns the full user document (dict).
+    Also pre-loads role permissions into user["_role_permissions"]
+    so RBAC checks don't need an extra DB call.
+    """
+    db = get_db()
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token_data = decode_access_token(token)
+    if not token_data or not token_data.user_id:
+        print("Invalid token data")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = db.users.find_one({"_id": ObjectId(token_data.user_id)})
+    if not user or not user.get("is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive or non-existent user",
+        )
+
+    # # Pre-load role permissions (avoids extra DB hit in every permission check)
+    # role_doc = db.roles.find_one({"name": user["role"]}) or {}
+    # user["_role_permissions"] = role_doc
+
+    return user
+
 def get_current_user(
     request: Request,
     db: Database = Depends(get_db),
