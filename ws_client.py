@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
         description="Connect to the camera_rbac websocket and print incoming messages."
     )
     parser.add_argument("--tenant_id", help="Tenant id used in the websocket path",default="tenant_1")
-    parser.add_argument("--token", help="JWT token passed as the token query parameter", default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWYwOTllMjU1YTcyMmEyNjAyMTEwODAiLCJyb2xlIjoiQWRtaW4iLCJleHAiOjE3Nzc5ODQ0MzV9.9YlfWwPtoVp5c_od_RF6Y6-XoAThDIhHKw6KaIXXIDU")
+    parser.add_argument("--token", help="JWT token passed as the token query parameter", default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWYwOTllMjU1YTcyMmEyNjAyMTEwODAiLCJyb2xlIjoiQWRtaW4iLCJleHAiOjE3NzgwNjM1OTB9.q-pwF_uuFTWxxJf4M6NRDuVRhIw_1VFjJ6yoNEVXhys")
     parser.add_argument("--host", default=DEFAULT_HOST, help="Websocket host")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Websocket port")
     return parser.parse_args()

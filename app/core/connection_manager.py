@@ -1,6 +1,7 @@
 import asyncio
 import json
 from confluent_kafka import Consumer
+from app.features.websocket.schemas import Alert_ws_schema
 
 
 class ConnectionManager:
@@ -46,7 +47,8 @@ class ConnectionManager:
             return
 
         try:
-            await ws.send_json(data)
+            payload = Alert_ws_schema.model_validate(data)
+            await ws.send_json(payload.model_dump())
         except Exception:
             # cleanup broken connection
             self.active_connections.pop(tenant_id, None)
