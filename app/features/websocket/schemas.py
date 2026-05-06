@@ -13,3 +13,4 @@ class Alert_ws_schema(BaseModel):
     label: str
     date: str
     time: str
+    alert_type: str
