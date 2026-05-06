@@ -5,6 +5,8 @@ from pymongo.database import Database
 from pydantic import BaseModel
 
 from app.core.custom_router import ProtectedRouter
+from app.core.config import get_settings
+from app.core.minio import generate_presigned_url
 from app.db.session import get_db
 from app.features.auth.models import PermissionEnum
 
@@ -25,8 +27,24 @@ class AlertRead(BaseModel):
     pipeline_id:   Optional[str] = None
     details:       Optional[dict] = None
     status:        Optional[str] = None
-    snapshot_path: Optional[str] = None
-    clip_path:     Optional[str] = None
+    snapshot_url:  Optional[str] = None
+    clip_url:      Optional[str] = None
+
+
+def _presign_object_path(object_path: Optional[str]) -> Optional[str]:
+    if not object_path:
+        return None
+
+    try:
+        url, _expires_in = generate_presigned_url(object_path)
+        return url
+    except Exception:
+        settings = get_settings()
+        scheme = "https" if settings.MINIO_SECURE else "http"
+        endpoint = settings.MINIO_ENDPOINT.rstrip("/")
+        bucket = settings.MINIO_BUCKET.strip("/")
+        object_name = object_path.lstrip("/")
+        return f"{scheme}://{endpoint}/{bucket}/{object_name}"
 
 
 def _serialize_alert(doc: dict) -> dict:
@@ -43,8 +61,8 @@ def _serialize_alert(doc: dict) -> dict:
         "pipeline_id":   doc.get("pipeline_id"),
         "details":       doc.get("details"),
         "status":        doc.get("status"),
-        "snapshot_path": doc.get("snapshot_path"),
-        "clip_path":     doc.get("clip_path"),
+        "snapshot_url":  _presign_object_path(doc.get("snapshot_path")),
+        "clip_url":      _presign_object_path(doc.get("clip_path")),
     }
 
 
