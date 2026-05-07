@@ -11,6 +11,5 @@ class Alert_ws_schema(BaseModel):
     severity: str
     status: str
     label: str
-    date: str
-    time: str
+    timestamp: float
     alert_type: str
