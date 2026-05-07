@@ -58,7 +58,6 @@ def _ensure_alert_indexes(db: Database) -> None:
     db.alerts.create_index([("tenant_id", ASCENDING), ("severity", ASCENDING), ("timestamp", DESCENDING)])
     _ALERT_INDEXES_READY = True
 
-ALLOWED_PAGE_SIZES = {10, 25, 50}
 ALLOWED_PRESETS = {"today", "7d", "30d", "all", "custom"}
 
 
@@ -302,7 +301,7 @@ def list_alerts_paginated(
         description="Presigned URL lifetime in seconds for snapshot_url and clip_url",
     ),
     page: int = Query(1, ge=1, description="Page number starting at 1"),
-    page_size: int = Query(10, ge=1, le=50, description="Page size: 10, 25, or 50"),
+    page_size: int = Query(10, ge=1, description="Page size; defaults to 10 if not provided"),
     sort: AlertSort = Query("timestamp_desc", description="timestamp_desc | timestamp_asc"),
     db: Database = Depends(get_db),
     current_user: dict = Depends(ProtectedRouter.inject_current_user),
@@ -316,12 +315,6 @@ def list_alerts_paginated(
     - custom: inclusive from date_from to date_to
     - all: no timestamp filter
     """
-    if page_size not in ALLOWED_PAGE_SIZES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="page_size must be one of 10, 25, or 50",
-        )
-
     effective_tenant_id = _resolve_tenant_id(current_user, tenant_id)
     query, effective_date_from, effective_date_to, effective_preset = _build_alert_query(
         effective_tenant_id,
