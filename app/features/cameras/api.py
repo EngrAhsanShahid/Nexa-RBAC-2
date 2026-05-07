@@ -129,7 +129,10 @@ def list_media(camera_id: str, db: Database = Depends(get_db)):
     response_model=MediaUrlResponse,
     dependencies=[ProtectedRouter.requires_permission(PermissionEnum.view_stream)],
 )
-def get_media_url(object_path: str):
+def get_media_url(
+    object_path: str,
+    expires_in_seconds: Optional[int] = Query(None, ge=1, description="Presigned URL lifetime in seconds"),
+):
     """
     Generate a temporary presigned download URL for an image or clip stored in MinIO.
     Pass the object_path returned from list_media.
@@ -137,7 +140,7 @@ def get_media_url(object_path: str):
     Requires view_stream permission.
     """
     try:
-        url, expires_in = generate_presigned_url(object_path)
+        url, expires_in = generate_presigned_url(object_path, expires_in_seconds)
     except Exception:
         raise HTTPException(status_code=404, detail="Media file not found in storage")
 

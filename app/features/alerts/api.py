@@ -10,7 +10,7 @@ from pymongo.database import Database
 
 from app.core.config import get_settings
 from app.core.custom_router import ProtectedRouter
-from app.core.minio import generate_presigned_url
+from app.core.minio import generate_presigned_url, normalize_object_path
 from app.db.session import get_db
 from app.features.auth.models import PermissionEnum
 from app.features.alerts.schemas import (
@@ -62,23 +62,28 @@ ALLOWED_PAGE_SIZES = {10, 25, 50}
 ALLOWED_PRESETS = {"today", "7d", "30d", "all", "custom"}
 
 
-def _presign_object_path(object_path: Optional[str]) -> Optional[str]:
+def _presign_object_path(object_path: Optional[str], expires_in_seconds: Optional[int] = None) -> Optional[str]:
     if not object_path:
         return None
 
     try:
-        url, _expires_in = generate_presigned_url(object_path)
+        url, _expires_in = generate_presigned_url(object_path, expires_in_seconds)
         return url
     except Exception:
         settings = get_settings()
         scheme = "https" if settings.MINIO_SECURE else "http"
         endpoint = settings.MINIO_ENDPOINT.rstrip("/")
         bucket = settings.MINIO_BUCKET.strip("/")
-        object_name = object_path.lstrip("/")
+        object_name = normalize_object_path(object_path)
         return f"{scheme}://{endpoint}/{bucket}/{object_name}"
 
 
-def _serialize_alert(doc: dict, *, use_alert_id_as_id: bool = False) -> dict:
+def _serialize_alert(
+    doc: dict,
+    *,
+    use_alert_id_as_id: bool = False,
+    expires_in_seconds: Optional[int] = None,
+) -> dict:
     details = doc.get("details") or {}
     if not isinstance(details, dict):
         details = {}
@@ -111,8 +116,8 @@ def _serialize_alert(doc: dict, *, use_alert_id_as_id: bool = False) -> dict:
         "status":        doc.get("status"),
         "snapshot_path": doc.get("snapshot_path"),
         "clip_path":     doc.get("clip_path"),
-        "snapshot_url":  _presign_object_path(doc.get("snapshot_path")),
-        "clip_url":      _presign_object_path(doc.get("clip_path")),
+        "snapshot_url":  _presign_object_path(doc.get("snapshot_path"), expires_in_seconds),
+        "clip_url":      _presign_object_path(doc.get("clip_path"), expires_in_seconds),
     }
 
 
@@ -291,6 +296,11 @@ def list_alerts_paginated(
     search: Optional[str] = Query(None, description="Search alert_type, label, camera_id, severity, status, details.label"),
     status: Optional[str] = Query(None, description="Filter by alert status"),
     severity: Optional[str] = Query(None, description="Filter by severity (high/medium/low)"),
+    expires_in_seconds: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Presigned URL lifetime in seconds for snapshot_url and clip_url",
+    ),
     page: int = Query(1, ge=1, description="Page number starting at 1"),
     page_size: int = Query(10, ge=1, le=50, description="Page size: 10, 25, or 50"),
     sort: AlertSort = Query("timestamp_desc", description="timestamp_desc | timestamp_asc"),
@@ -335,7 +345,10 @@ def list_alerts_paginated(
         .skip((params.page - 1) * params.size)
         .limit(params.size)
     )
-    items = [_serialize_alert(doc, use_alert_id_as_id=True) for doc in cursor]
+    items = [
+        _serialize_alert(doc, use_alert_id_as_id=True, expires_in_seconds=expires_in_seconds)
+        for doc in cursor
+    ]
 
     page_result = create_page(items, total=total, params=params)
 
@@ -367,6 +380,11 @@ def list_alerts_paginated(
 )
 def get_alert(
     alert_id: str,
+    expires_in_seconds: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Presigned URL lifetime in seconds for snapshot_url and clip_url",
+    ),
     db: Database = Depends(get_db),
 ):
     """Get a single alert by alert_id. Requires view_stream permission."""
@@ -377,7 +395,7 @@ def get_alert(
             detail="Alert not found",
         )
 
-    return _serialize_alert(alert)
+    return _serialize_alert(alert, expires_in_seconds=expires_in_seconds)
 
 
 @router.get(
@@ -390,6 +408,11 @@ def list_alerts(
     camera_id: Optional[str] = Query(None, description="Filter by camera_id"),
     status: Optional[str] = Query(None, description="Filter by status (open/closed)"),
     severity: Optional[str] = Query(None, description="Filter by severity (low/medium/high)"),
+    expires_in_seconds: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Presigned URL lifetime in seconds for snapshot_url and clip_url",
+    ),
     db: Database = Depends(get_db),
 ):
     """Get alerts for a tenant. Requires view_stream permission."""
@@ -402,4 +425,4 @@ def list_alerts(
         query["severity"] = severity
 
     alerts = list(db.alerts.find(query).sort("timestamp", -1))
-    return [_serialize_alert(a) for a in alerts]
+    return [_serialize_alert(a, expires_in_seconds=expires_in_seconds) for a in alerts]
