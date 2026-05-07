@@ -64,6 +64,17 @@ def _matches_query(doc, query):
     return True
 
 
+def _evaluate_aggregate_expression(expression, doc):
+    if isinstance(expression, dict) and "$eq" in expression:
+        left, right = expression["$eq"]
+        return _evaluate_aggregate_expression(left, doc) == _evaluate_aggregate_expression(right, doc)
+
+    if isinstance(expression, str) and expression.startswith("$"):
+        return _nested_value(doc, expression[1:])
+
+    return expression
+
+
 class FakeCursor:
     def __init__(self, docs):
         self.docs = docs
@@ -112,6 +123,38 @@ class FakeCollection:
 
     def count_documents(self, query):
         return sum(1 for doc in self.docs if _matches_query(doc, query))
+
+    def aggregate(self, pipeline):
+        docs = [copy.deepcopy(doc) for doc in self.docs]
+
+        for stage in pipeline:
+            if "$match" in stage:
+                docs = [doc for doc in docs if _matches_query(doc, stage["$match"])]
+                continue
+
+            if "$group" in stage:
+                group_spec = stage["$group"]
+                result = {"_id": group_spec.get("_id")}
+
+                for field_name, accumulator in group_spec.items():
+                    if field_name == "_id":
+                        continue
+
+                    total = 0
+                    if isinstance(accumulator, dict) and "$sum" in accumulator:
+                        sum_expression = accumulator["$sum"]
+                        for doc in docs:
+                            if sum_expression == 1:
+                                total += 1
+                            elif isinstance(sum_expression, dict) and "$cond" in sum_expression:
+                                condition, true_value, false_value = sum_expression["$cond"]
+                                total += true_value if _evaluate_aggregate_expression(condition, doc) else false_value
+
+                    result[field_name] = total
+
+                return iter([result])
+
+        return iter([])
 
 
 class FakeDatabase:
@@ -245,6 +288,84 @@ class AlertsPaginatedApiTests(unittest.TestCase):
         self.assertEqual(len(body_two["items"]), 4)
         self.assertFalse(body_two["pagination"]["has_next"])
         self.assertTrue(body_two["pagination"]["has_prev"])
+
+    def test_alerts_timeline_returns_counts_for_tenant_and_camera(self):
+        response = self.client.get(
+            "/api/v1/alerts/timeline",
+            params={"tenant_id": "tenant_1", "camera_id": "cam_1"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "tenant_id": "tenant_1",
+            "camera_id": "cam_1",
+            "total": 8,
+            "high": 3,
+            "medium": 2,
+            "low": 3,
+        })
+
+    def test_alerts_timeline_camera_id_is_optional(self):
+        response = self.client.get(
+            "/api/v1/alerts/timeline",
+            params={"tenant_id": "tenant_1"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["tenant_id"], "tenant_1")
+        self.assertIsNone(body["camera_id"])
+        self.assertEqual(body["total"], 14)
+        self.assertEqual(body["high"], 5)
+        self.assertEqual(body["medium"], 3)
+        self.assertEqual(body["low"], 6)
+
+    def test_alerts_timeline_enforces_tenant_isolation(self):
+        response = self.client.get(
+            "/api/v1/alerts/timeline",
+            params={"tenant_id": "tenant_2"},
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_alerts_timeline_missing_severity_categories_return_zero(self):
+        self.app.dependency_overrides[get_current_user] = lambda: {
+            "tenant_id": "tenant_2",
+            "role": "Admin",
+            "permission_overrides": [],
+            "_role_permissions": {"view_stream": True},
+        }
+
+        response = self.client.get(
+            "/api/v1/alerts/timeline",
+            params={"camera_id": "cam_9"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "tenant_id": "tenant_2",
+            "camera_id": "cam_9",
+            "total": 2,
+            "high": 1,
+            "medium": 1,
+            "low": 0,
+        })
+
+    def test_alerts_timeline_no_matching_alerts_returns_zero_counts(self):
+        response = self.client.get(
+            "/api/v1/alerts/timeline",
+            params={"tenant_id": "tenant_1", "camera_id": "cam_999"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "tenant_id": "tenant_1",
+            "camera_id": "cam_999",
+            "total": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
+        })
 
     def test_date_presets_and_custom_ranges(self):
         today = self.client.get("/api/v1/alerts/paginated", params={"preset": "today", "page": 1, "page_size": 10})

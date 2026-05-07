@@ -20,8 +20,8 @@ from app.features.alerts.schemas import (
     AlertsPagination,
     AlertPreset,
     AlertSort,
+    AlertsTimelineResponse,
 )
-
 try:
     from fastapi_pagination import Params, create_page  # type: ignore[import-not-found]
 except ImportError:
@@ -56,9 +56,67 @@ def _ensure_alert_indexes(db: Database) -> None:
     db.alerts.create_index([("tenant_id", ASCENDING), ("camera_id", ASCENDING), ("timestamp", DESCENDING)])
     db.alerts.create_index([("tenant_id", ASCENDING), ("status", ASCENDING), ("timestamp", DESCENDING)])
     db.alerts.create_index([("tenant_id", ASCENDING), ("severity", ASCENDING), ("timestamp", DESCENDING)])
+    db.alerts.create_index([("tenant_id", ASCENDING), ("camera_id", ASCENDING), ("severity", ASCENDING)])
+    db.alerts.create_index([("tenant_id", ASCENDING), ("camera_id", ASCENDING)])
+    db.alerts.create_index([("tenant_id", ASCENDING), ("severity", ASCENDING)])
     _ALERT_INDEXES_READY = True
 
 ALLOWED_PRESETS = {"today", "7d", "30d", "all", "custom"}
+
+
+def _build_timeline_query(tenant_id: str, camera_id: Optional[str]) -> dict:
+    query: dict = {"tenant_id": tenant_id}
+    if camera_id:
+        query["camera_id"] = camera_id
+    return query
+
+
+def _aggregate_timeline_counts(db: Database, query: dict) -> dict:
+    pipeline = [
+        {"$match": query},
+        {
+            "$group": {
+                "_id": None,
+                "total": {"$sum": 1},
+                "high": {"$sum": {"$cond": [{"$eq": ["$severity", "high"]}, 1, 0]}},
+                "medium": {"$sum": {"$cond": [{"$eq": ["$severity", "medium"]}, 1, 0]}},
+                "low": {"$sum": {"$cond": [{"$eq": ["$severity", "low"]}, 1, 0]}},
+            }
+        },
+    ]
+    result = list(db.alerts.aggregate(pipeline))
+    return result[0] if result else {"total": 0, "high": 0, "medium": 0, "low": 0}
+
+
+@router.get(
+    "/timeline",
+    response_model=AlertsTimelineResponse,
+    dependencies=[ProtectedRouter.requires_permission(PermissionEnum.view_stream)],
+)
+def get_alerts_timeline(
+    tenant_id: Optional[str] = Query(None, description="Tenant ID (defaults to authenticated user's tenant)"),
+    camera_id: Optional[str] = Query(None, description="Filter by camera_id"),
+    db: Database = Depends(get_db),
+    current_user: dict = Depends(ProtectedRouter.inject_current_user),
+):
+    """
+    Return total alert counts and severity buckets for the live monitoring timeline.
+
+    Tenant access is always enforced via the authenticated user or the provided tenant_id.
+    """
+    effective_tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    query = _build_timeline_query(effective_tenant_id, camera_id)
+    _ensure_alert_indexes(db)
+    counts = _aggregate_timeline_counts(db, query)
+
+    return AlertsTimelineResponse(
+        tenant_id=effective_tenant_id,
+        camera_id=camera_id,
+        total=int(counts.get("total", 0) or 0),
+        high=int(counts.get("high", 0) or 0),
+        medium=int(counts.get("medium", 0) or 0),
+        low=int(counts.get("low", 0) or 0),
+    )
 
 
 def _presign_object_path(object_path: Optional[str], expires_in_seconds: Optional[int] = None) -> Optional[str]:

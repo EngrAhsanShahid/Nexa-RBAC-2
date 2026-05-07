@@ -52,3 +52,12 @@ class AlertsPageResponse(BaseModel):
     items: List[AlertRead]
     pagination: AlertsPagination
     filters: AlertsFilters
+
+
+class AlertsTimelineResponse(BaseModel):
+    tenant_id: str
+    camera_id: Optional[str] = None
+    total: int
+    high: int
+    medium: int
+    low: int
