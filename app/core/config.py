@@ -44,6 +44,15 @@ class Settings:
     LIVEKIT_API_SECRET: str = os.getenv("LIVEKIT_API_SECRET", "")
     LIVEKIT_URL: str        = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
     LIVEKIT_TOKEN_TTL: int  = int(os.getenv("LIVEKIT_TOKEN_TTL", "3600"))
+
+    # MFA / Email (Gmail SMTP)
+    GMAIL_EMAIL: str = os.getenv("GMAIL_EMAIL", "")
+    GMAIL_APP_PASSWORD: str = os.getenv("GMAIL_APP_PASSWORD", "nswl iuvq bilv errp")
+    GMAIL_SMTP_HOST: str = os.getenv("GMAIL_SMTP_HOST", "smtp.gmail.com")
+    GMAIL_SMTP_PORT: int = int(os.getenv("GMAIL_SMTP_PORT", "465"))
+    GMAIL_FROM_EMAIL: str = os.getenv("GMAIL_FROM_EMAIL", GMAIL_EMAIL)
+    MFA_OTP_EXPIRES_SECONDS: int = int(os.getenv("MFA_OTP_EXPIRES_SECONDS", "300"))
+    MFA_OTP_LENGTH: int     = int(os.getenv("MFA_OTP_LENGTH", "6"))
     
     ### change here
     # Kafka

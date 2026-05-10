@@ -83,7 +83,7 @@ def seed_users():
             "last_active":         None,
         },
         {
-            "email":               "admin@example.com",
+            "email":               "lambdatheta123@gmail.com",
             "full_name":           "Admin User",
             "hashed_password":     get_password_hash("admin123"),
             "role":                UserRole.admin.value,
@@ -216,5 +216,5 @@ if __name__ == "__main__":
     print()
     print("Login credentials:")
     print("  superadmin@example.com / superadmin123")
-    print("  admin@example.com      / admin123")
+    print("  lambdatheta123@gmail.com / admin123")
     print("  user@example.com       / user123")

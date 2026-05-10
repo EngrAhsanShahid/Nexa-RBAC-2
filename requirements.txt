@@ -11,3 +11,4 @@ minio
 PyJWT
 httpx
 fastapi-pagination
+resend

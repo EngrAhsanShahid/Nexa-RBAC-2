@@ -16,6 +16,22 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+class MfaLoginResponse(BaseModel):
+    mfa_required: bool = True
+    challenge_id: str
+    message: str
+    expires_in_seconds: int
+
+
+class MfaVerifyRequest(BaseModel):
+    challenge_id: str
+    otp: str
+
+
+class MfaVerifyResponse(Token):
+    pass
+
+
 class TokenData(BaseModel):
     user_id: Optional[str] = None
     role:    Optional[str] = None
