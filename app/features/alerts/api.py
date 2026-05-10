@@ -20,6 +20,7 @@ from app.features.alerts.schemas import (
     AlertsPagination,
     AlertPreset,
     AlertSort,
+    AlertStatusResponse,
     AlertStatusUpdate,
     AlertsTimelineResponse,
 )
@@ -452,7 +453,7 @@ def get_alert(
 
 @router.patch(
     "/{alert_id}/status",
-    response_model=AlertRead,
+    response_model=AlertStatusResponse,
     dependencies=[ProtectedRouter.requires_permission(PermissionEnum.view_stream)],
 )
 def update_alert_status(
@@ -476,7 +477,12 @@ def update_alert_status(
     if not updated_alert:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
 
-    return _serialize_alert(updated_alert)
+    return {
+        "alert_id": updated_alert.get("alert_id"),
+        "tenant_id": updated_alert.get("tenant_id"),
+        "camera_id": updated_alert.get("camera_id"),
+        "status": updated_alert.get("status"),
+    }
 
 
 @router.get(

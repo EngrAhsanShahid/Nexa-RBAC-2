@@ -68,3 +68,10 @@ AlertStatusValue = Literal["valid", "invalid"]
 
 class AlertStatusUpdate(BaseModel):
     status: AlertStatusValue
+
+
+class AlertStatusResponse(BaseModel):
+    alert_id: str
+    tenant_id: Optional[str] = None
+    camera_id: Optional[str] = None
+    status: Optional[str] = None
