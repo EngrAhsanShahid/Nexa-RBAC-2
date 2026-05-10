@@ -44,6 +44,12 @@ class Settings:
     LIVEKIT_API_SECRET: str = os.getenv("LIVEKIT_API_SECRET", "")
     LIVEKIT_URL: str        = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
     LIVEKIT_TOKEN_TTL: int  = int(os.getenv("LIVEKIT_TOKEN_TTL", "3600"))
+    
+    ### change here
+    # Kafka
+    KAFKA_BOOTSTRAP_SERVERS: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "192.168.100.11:9093")
+    KAFKA_ALERTS_TOPIC: str = os.getenv("KAFKA_ALERTS_TOPIC", "alerts")
+    KAFKA_GROUP_ID: str = os.getenv("KAFKA_GROUP_ID", "frontend_ws_2")
 
     @property
     def frontend_origins(self) -> list[str]:

@@ -1,11 +1,13 @@
 import asyncio
 import json
-from confluent_kafka import Consumer
+### change here
+from confluent_kafka import Consumer, KafkaError, KafkaException
+from confluent_kafka.admin import AdminClient, NewTopic
 from app.features.websocket.schemas import Alert_ws_schema
 
 
 class ConnectionManager:
-    def __init__(self, bootstrap_server, topic, group_id="frontend_ws"):
+    def __init__(self, bootstrap_server, topic, group_id="frontend_ws_2"):
         # single client per tenant
         self.active_connections: dict[str, any] = {}
 
@@ -17,7 +19,35 @@ class ConnectionManager:
 
         self.topic = topic
         self.consumer = Consumer(self.conf)
+        ### change here
+        self._ensure_topic()
         self.consumer.subscribe([self.topic])
+
+    ### change here
+    def _ensure_topic(self):
+        admin_client = AdminClient({"bootstrap.servers": self.conf["bootstrap.servers"]})
+
+        try:
+            metadata = self.consumer.list_topics(timeout=5)
+            topic_metadata = metadata.topics.get(self.topic)
+
+            if topic_metadata is not None and topic_metadata.error is None:
+                return
+
+            futures = admin_client.create_topics([
+                NewTopic(self.topic, num_partitions=1, replication_factor=1)
+            ])
+            futures[self.topic].result(timeout=10)
+
+        except KafkaException as exc:
+            error = exc.args[0] if exc.args else None
+            if error and error.code() == KafkaError.TOPIC_ALREADY_EXISTS:
+                return
+
+            print(f"[Kafka Setup Error] {exc}")
+
+        except Exception as exc:
+            print(f"[Kafka Setup Error] {exc}")
 
     async def connect(self, tenant_id: str, websocket):
         await websocket.accept()
@@ -63,6 +93,11 @@ class ConnectionManager:
                 continue
 
             if msg.error():
+                ### change here
+                if msg.error().code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                    await asyncio.sleep(2)
+                    continue
+
                 print(f"[Kafka Error] {msg.error()}")
                 continue
 
