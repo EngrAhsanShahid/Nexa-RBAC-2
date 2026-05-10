@@ -61,3 +61,10 @@ class AlertsTimelineResponse(BaseModel):
     high: int
     medium: int
     low: int
+
+
+AlertStatusValue = Literal["valid", "invalid"]
+
+
+class AlertStatusUpdate(BaseModel):
+    status: AlertStatusValue

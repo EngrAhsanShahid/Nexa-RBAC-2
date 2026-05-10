@@ -20,6 +20,7 @@ from app.features.alerts.schemas import (
     AlertsPagination,
     AlertPreset,
     AlertSort,
+    AlertStatusUpdate,
     AlertsTimelineResponse,
 )
 try:
@@ -447,6 +448,35 @@ def get_alert(
         )
 
     return _serialize_alert(alert, expires_in_seconds=expires_in_seconds)
+
+
+@router.patch(
+    "/{alert_id}/status",
+    response_model=AlertRead,
+    dependencies=[ProtectedRouter.requires_permission(PermissionEnum.view_stream)],
+)
+def update_alert_status(
+    alert_id: str,
+    payload: AlertStatusUpdate,
+    tenant_id: Optional[str] = Query(None, description="Tenant ID (defaults to authenticated user's tenant)"),
+    db: Database = Depends(get_db),
+    current_user: dict = Depends(ProtectedRouter.inject_current_user),
+):
+    """Update an alert status to valid or invalid while enforcing tenant isolation."""
+    effective_tenant_id = _resolve_tenant_id(current_user, tenant_id)
+    alert = _find_alert_by_reference(db, alert_id)
+    if not alert or alert.get("tenant_id") != effective_tenant_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
+
+    updated_alert = db.alerts.find_one_and_update(
+        {"_id": alert.get("_id")},
+        {"$set": {"status": payload.status}},
+        return_document=True,
+    )
+    if not updated_alert:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alert not found")
+
+    return _serialize_alert(updated_alert)
 
 
 @router.get(

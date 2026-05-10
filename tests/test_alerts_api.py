@@ -121,6 +121,16 @@ class FakeCollection:
                 return copy.deepcopy(doc)
         return None
 
+    def find_one_and_update(self, query, update, return_document=True):
+        for index, doc in enumerate(self.docs):
+            if _matches_query(doc, query):
+                updated_doc = copy.deepcopy(doc)
+                if "$set" in update:
+                    updated_doc.update(update["$set"])
+                self.docs[index] = updated_doc
+                return copy.deepcopy(updated_doc)
+        return None
+
     def count_documents(self, query):
         return sum(1 for doc in self.docs if _matches_query(doc, query))
 
@@ -366,6 +376,39 @@ class AlertsPaginatedApiTests(unittest.TestCase):
             "medium": 0,
             "low": 0,
         })
+
+    def test_alert_status_update_marks_alert_valid(self):
+        response = self.client.patch(
+            "/api/v1/alerts/tenant_1_cam_1_00/status",
+            params={"tenant_id": "tenant_1"},
+            json={"status": "valid"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["alert_id"], "tenant_1_cam_1_00")
+        self.assertEqual(body["status"], "valid")
+
+    def test_alert_status_update_marks_alert_invalid(self):
+        response = self.client.patch(
+            "/api/v1/alerts/tenant_1_cam_1_00/status",
+            params={"tenant_id": "tenant_1"},
+            json={"status": "invalid"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["alert_id"], "tenant_1_cam_1_00")
+        self.assertEqual(body["status"], "invalid")
+
+    def test_alert_status_update_enforces_tenant_isolation(self):
+        response = self.client.patch(
+            "/api/v1/alerts/tenant_2_cam_9_30/status",
+            params={"tenant_id": "tenant_1"},
+            json={"status": "valid"},
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_date_presets_and_custom_ranges(self):
         today = self.client.get("/api/v1/alerts/paginated", params={"preset": "today", "page": 1, "page_size": 10})
