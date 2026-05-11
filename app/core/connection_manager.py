@@ -7,9 +7,8 @@ from app.features.websocket.schemas import Alert_ws_schema
 
 
 class ConnectionManager:
-    def __init__(self, bootstrap_server, topic, group_id="frontend_ws_2"):
-        # single client per tenant
-        self.active_connections: dict[str, any] = {}
+    def __init__(self, bootstrap_server, topic, group_id="frontend_ws_4"):
+        self.active_connections: dict[str, list] = {}
 
         self.conf = {
             "bootstrap.servers": bootstrap_server,
@@ -51,20 +50,15 @@ class ConnectionManager:
 
     async def connect(self, tenant_id: str, websocket):
         await websocket.accept()
-
-        # safely replace existing connection
-        old_ws = self.active_connections.get(tenant_id)
-        if old_ws:
-            try:
-                await old_ws.close(code=1000)
-            except:
-                pass
-
-        self.active_connections[tenant_id] = websocket
+        if tenant_id not in self.active_connections:
+            self.active_connections[tenant_id] = []
+        self.active_connections[tenant_id].append(websocket)
 
     async def disconnect(self, tenant_id: str, websocket):
-        # remove only if same socket
-        if self.active_connections.get(tenant_id) == websocket:
+        connections = self.active_connections.get(tenant_id, [])
+        if websocket in connections:
+            connections.remove(websocket)
+        if not connections:
             self.active_connections.pop(tenant_id, None)
 
     async def broadcast(self, data: dict):
@@ -72,15 +66,23 @@ class ConnectionManager:
         if not tenant_id:
             return
 
-        ws = self.active_connections.get(tenant_id)
-        if not ws:
+        connections = self.active_connections.get(tenant_id, [])
+        if not connections:
             return
 
-        try:
-            payload = Alert_ws_schema.model_validate(data)
-            await ws.send_json(payload.model_dump())
-        except Exception:
-            # cleanup broken connection
+        payload = Alert_ws_schema.model_validate(data)
+        payload_json = payload.model_dump()
+
+        dead = []
+        for ws in connections:
+            try:
+                await ws.send_json(payload_json)
+            except Exception:
+                dead.append(ws)
+
+        for ws in dead:
+            connections.remove(ws)
+        if not connections:
             self.active_connections.pop(tenant_id, None)
 
     async def kafka_listener(self):
