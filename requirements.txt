@@ -14,3 +14,4 @@ fastapi-pagination
 livekit==1.1.2
 livekit-api==1.1.0
 livekit-protocol==1.1.2
+confluent-kafka
