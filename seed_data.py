@@ -73,17 +73,18 @@ def seed_users():
     now = datetime.now(timezone.utc)
     users = [
         {
-            "email":               "superadmin@example.com",
+            "email":               "m.hussain7006@gmail.com",
             "full_name":           "Super Admin",
             "hashed_password":     get_password_hash("superadmin123"),
             "role":                UserRole.superadmin.value,
             "is_active":           True,
             "permission_overrides": [],
             "created_at":          now,
-            "last_active":         None,
+            "last_active":         None,\
+            "tenant_id":           "tenant_01",  # Superadmin can access all tenants
         },
         {
-            "email":               "lambdatheta123@gmail.com",
+            "email":               "husain@lambdatheta.com",
             "full_name":           "Admin User",
             "hashed_password":     get_password_hash("admin123"),
             "role":                UserRole.admin.value,
@@ -91,9 +92,21 @@ def seed_users():
             "permission_overrides": [],
             "created_at":          now,
             "last_active":         None,
+            "tenant_id":           "tenant_01",  # Admin can access tenant_01
         },
         {
-            "email":               "user@example.com",
+            "email":               "ahsanshahid2010@hotmail.com",
+            "full_name":           "Admin User",
+            "hashed_password":     get_password_hash("ahsan123"),
+            "role":                UserRole.admin.value,
+            "is_active":           True,
+            "permission_overrides": [],
+            "created_at":          now,
+            "last_active":         None,
+            "tenant_id":           "tenant_01",  # Admin can access tenant_01
+        },        
+        {
+            "email":               "ahsanshahid2010.as@gmail.com",
             "full_name":           "Regular User",
             "hashed_password":     get_password_hash("user123"),
             "role":                UserRole.user.value,
@@ -101,6 +114,7 @@ def seed_users():
             "permission_overrides": [],
             "created_at":          now,
             "last_active":         None,
+            "tenant_id":           "tenant_01",  # Regular user can access tenant_01
         },
     ]
 
@@ -117,28 +131,12 @@ def seed_cameras():
 
     cameras = [
         {
-            "tenant_id":         "tenant_001",
-            "camera_id":         "cam_001",
-            "source_path":       "rtsp://192.168.1.101:554/stream1",
-            "target_fps":        10,
-            "pipelines":         ["motion_detection", "object_detection"],
-            "enabled":           True,
-        },
-        {
-            "tenant_id":         "tenant_001",
-            "camera_id":         "cam_002",
-            "source_path":       "rtsp://192.168.1.102:554/stream1",
-            "target_fps":        15,
-            "pipelines":         ["face_recognition"],
-            "enabled":           True,
-        },
-        {
-            "tenant_id":         "tenant_002",
-            "camera_id":         "cam_003",
-            "source_path":       "rtsp://10.0.0.50:554/live",
-            "target_fps":        10,
-            "pipelines":         ["motion_detection"],
-            "enabled":           False,
+            "tenant_id":         "tenant_01",
+            "camera_id":         "cam_1",
+            "source_path":       "rtsp://LT_corridor:12345678@192.168.100.211/stream1",
+            "target_fps":        5,
+            "pipelines":         ["smoking_detection", "fight_detection", "fire_detection", "fall_detection", "weapon_tiling", "spiking", "ppe"],
+            "enabled":           true,
         },
     ]
 
@@ -156,51 +154,6 @@ def seed_alerts():
     now = datetime.now(timezone.utc).timestamp()
 
     alerts = [
-        {
-            "alert_id":      "alert_001",
-            "tenant_id":     "tenant_001",
-            "camera_id":     "cam_001",
-            "frame_id":      "frame_0001",
-            "alert_type":    "motion_detected",
-            "timestamp":     now - 3600,
-            "severity":      "low",
-            "confidence":    0.82,
-            "pipeline_id":   "motion_detection",
-            "details":       {"region": "zone_A", "pixel_change": 12.5},
-            "status":        "open",
-            "snapshot_path": "tenant_001/cam_001/snapshots/frame_0001.jpg",
-            "clip_path":     None,
-        },
-        {
-            "alert_id":      "alert_002",
-            "tenant_id":     "tenant_001",
-            "camera_id":     "cam_002",
-            "frame_id":      "frame_0240",
-            "alert_type":    "face_recognized",
-            "timestamp":     now - 1800,
-            "severity":      "medium",
-            "confidence":    0.95,
-            "pipeline_id":   "face_recognition",
-            "details":       {"person_id": "unknown", "match_score": 0.95},
-            "status":        "open",
-            "snapshot_path": "tenant_001/cam_002/snapshots/frame_0240.jpg",
-            "clip_path":     "tenant_001/cam_002/clips/clip_0240.mp4",
-        },
-        {
-            "alert_id":      "alert_003",
-            "tenant_id":     "tenant_002",
-            "camera_id":     "cam_003",
-            "frame_id":      "frame_0512",
-            "alert_type":    "intrusion_detected",
-            "timestamp":     now - 600,
-            "severity":      "high",
-            "confidence":    0.91,
-            "pipeline_id":   "motion_detection",
-            "details":       {"region": "perimeter", "object_count": 2},
-            "status":        "closed",
-            "snapshot_path": "tenant_002/cam_003/snapshots/frame_0512.jpg",
-            "clip_path":     "tenant_002/cam_003/clips/clip_0512.mp4",
-        },
     ]
 
     db.alerts.insert_many(alerts)
@@ -215,6 +168,6 @@ if __name__ == "__main__":
     print("✅ All data seeded successfully!")
     print()
     print("Login credentials:")
-    print("  superadmin@example.com / superadmin123")
-    print("  lambdatheta123@gmail.com / admin123")
-    print("  user@example.com       / user123")
+    print("  m.hussain7006@gmail.com / superadmin123")
+    print("  husain@lambdatheta.com / admin123")
+    print("  ahsanshahid2010@hotmail.com       / user123")
