@@ -80,7 +80,7 @@ def seed_users():
             "is_active":           True,
             "permission_overrides": [],
             "created_at":          now,
-            "last_active":         None,\
+            "last_active":         None,
             "tenant_id":           "tenant_01",  # Superadmin can access all tenants
         },
         {
@@ -136,7 +136,7 @@ def seed_cameras():
             "source_path":       "rtsp://LT_corridor:12345678@192.168.100.211/stream1",
             "target_fps":        5,
             "pipelines":         ["smoking_detection", "fight_detection", "fire_detection", "fall_detection", "weapon_tiling", "spiking", "ppe"],
-            "enabled":           true,
+            "enabled":           True,
         },
     ]
 
@@ -153,7 +153,7 @@ def seed_alerts():
 
     now = datetime.now(timezone.utc).timestamp()
 
-    alerts = [
+    alerts = [{},
     ]
 
     db.alerts.insert_many(alerts)
