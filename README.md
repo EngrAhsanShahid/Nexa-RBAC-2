@@ -23,13 +23,13 @@ pip install -r requirements.txt
 4. Start the API:
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
 5. Open the API docs:
 
 ```text
-http://localhost:8000/docs
+http://localhost:8001/docs
 ```
 
 ### Optional seed data
@@ -100,7 +100,7 @@ docker compose up --build -d
 
 - The compose file starts only the backend service.
 - MongoDB is expected to be available from the `MONGO_URI` value in `.env`.
-- The backend listens on port `8000` inside the container and is published to `localhost:8000`.
+- The backend listens on port `8001` inside the container and is published to `localhost:8001`.
 
 ## Useful Commands
 

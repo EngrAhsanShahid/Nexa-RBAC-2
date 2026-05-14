@@ -13,7 +13,7 @@ import websockets
 
 
 DEFAULT_HOST = "localhost"
-DEFAULT_PORT = 8000
+DEFAULT_PORT = 8001
 
 
 def build_websocket_url(host: str, port: int, tenant_id: str, token: str) -> str:
