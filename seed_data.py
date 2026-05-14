@@ -74,7 +74,7 @@ def seed_users():
     users = [
         {
             "email":               "m.hussain7006@gmail.com",
-            "full_name":           "Super Admin",
+            "full_name":           "Muhammad Hussain",
             "hashed_password":     get_password_hash("superadmin123"),
             "role":                UserRole.superadmin.value,
             "is_active":           True,
@@ -85,7 +85,7 @@ def seed_users():
         },
         {
             "email":               "husain@lambdatheta.com",
-            "full_name":           "Admin User",
+            "full_name":           "Husain Ahmed",
             "hashed_password":     get_password_hash("admin123"),
             "role":                UserRole.admin.value,
             "is_active":           True,
@@ -96,7 +96,7 @@ def seed_users():
         },
         {
             "email":               "ahsanshahid2010@hotmail.com",
-            "full_name":           "Admin User",
+            "full_name":           "Ahsan Shahid",
             "hashed_password":     get_password_hash("ahsan123"),
             "role":                UserRole.admin.value,
             "is_active":           True,
@@ -104,10 +104,21 @@ def seed_users():
             "created_at":          now,
             "last_active":         None,
             "tenant_id":           "tenant_01",  # Admin can access tenant_01
-        },        
+        }, 
+        {
+            "email":               "anas2024lt@gmail.com",
+            "full_name":           "Anas Shaikh",
+            "hashed_password":     get_password_hash("anas123"),
+            "role":                UserRole.admin.value,
+            "is_active":           True,
+            "permission_overrides": [],
+            "created_at":          now,
+            "last_active":         None,
+            "tenant_id":           "tenant_01",  # Admin can access tenant_01
+        },            
         {
             "email":               "ahsanshahid2010.as@gmail.com",
-            "full_name":           "Regular User",
+            "full_name":           "Ahsan Shahid",
             "hashed_password":     get_password_hash("user123"),
             "role":                UserRole.user.value,
             "is_active":           True,
@@ -153,7 +164,8 @@ def seed_alerts():
 
     now = datetime.now(timezone.utc).timestamp()
 
-    alerts = [{},
+    alerts = [
+        {},
     ]
 
     db.alerts.insert_many(alerts)
@@ -170,4 +182,4 @@ if __name__ == "__main__":
     print("Login credentials:")
     print("  m.hussain7006@gmail.com / superadmin123")
     print("  husain@lambdatheta.com / admin123")
-    print("  ahsanshahid2010@hotmail.com       / user123")
+    print("  ahsanshahid2010@hotmail.com       / ahsan123")

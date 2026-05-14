@@ -7,3 +7,12 @@ services:
       - .env
     ports:
       - "8001:8001"
+    environment:
+      MONGO_URI: mongodb://nexa-mongodb:27017
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+    networks:
+      - nexa-rbac-2_nexa_net
+
+networks:
+  nexa-rbac-2_nexa_net:
+    external: true
